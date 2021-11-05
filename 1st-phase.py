@@ -46,39 +46,73 @@ def add_to_index(token , position , docID):
 
 
 
+def preprocess ():
+
+    for i in range(1, number_of_rows+1):
+
+        temp = data_reader.sheet_by_index(0).cell(i, 0).value
+        temp = normalizer.normalize(temp)
 
 
+        temp_tokens = tokenizer.tokenize_words(temp)
+        print(temp_tokens)
+        with open('Tokens.txt', "w", encoding="utf-8") as filehandle:
+            for j in range(len(temp_tokens)):
+                listitem = temp_tokens[j]
+                file = open("stop_words.txt", encoding="utf-8")
 
-for i in range(1, number_of_rows+1):
-
-    temp = data_reader.sheet_by_index(0).cell(i, 0).value
-    temp = normalizer.normalize(temp)
-    worksheet.write(i, 0, temp)
-
-    temp_tokens = tokenizer.tokenize_words(temp)
-    print(temp_tokens)
-    with open('Tokens.txt', "w", encoding="utf-8") as filehandle:
-        for j in range(len(temp_tokens)):
-            listitem = temp_tokens[j]
-            file = open("stop_words.txt", encoding="utf-8")
-
-            if (listitem in file.read()):
-                print("stop :" + listitem)
-            else:
-
-                stem_token = stemmer.convert_to_stem(listitem)
-                if "&" in stem_token:
-                    mazi, mozare = stem_token.split("&")
-                    filehandle.write('%s\n' % mazi)
-                    filehandle.write('%s\n' % mozare)
-                    add_to_index(mazi, j + 1, i)
-                    add_to_index(mozare, j + 1, i)
-
+                if (listitem in file.read()):
+                    print("stop :" + listitem)
                 else:
-                    filehandle.write('%s\n' % stem_token)
-                    add_to_index(stem_token, j + 1, 2)
+
+                    stem_token = stemmer.convert_to_stem(listitem)
+                    if "&" in stem_token:
+                        mazi, mozare = stem_token.split("&")
+                        filehandle.write('%s\n' % mazi)
+                        filehandle.write('%s\n' % mozare)
+                        add_to_index(mazi, j + 1, i)
+                        add_to_index(mozare, j + 1, i)
+
+                    else:
+                        filehandle.write('%s\n' % stem_token)
+                        add_to_index(stem_token, j + 1, 2)
+
+#TODO handle searching verbs
+
+def answer_one_word_query(query):
+ normal_query = normalizer.normalize(query)
+ stem_query = stemmer.convert_to_stem(normal_query)
+
+ if stem_query in positional_index :
+     print("find some Docs related :)")
+     dict_value = positional_index[stem_query]
+     docs_and_positions = dict_value[0]
+
+     for doc in docs_and_positions:
+         title = data_reader.sheet_by_index(0).cell(int(doc), 2).value
+         print(title)
 
 
+def answer_multi_word_query(query):
+    docs = dict()
+    normal_query = normalizer.normalize(query)
+    tokens = tokenizer.tokenize_words(normal_query)
+    for token in tokens :
+        stem_token = stemmer.convert_to_stem(token)
+        if stem_token in positional_index:
+            print("find some Docs related :)")
+            dict_value = positional_index[stem_token]
+            docs_and_positions = dict_value[0]
+            for doc in docs_and_positions:
+                if doc  not in docs:
+                    docs[doc] = 1
+                else:
+                    docs[doc] = docs[doc] + 1
+
+    docs = dict(sorted(docs.items(), key=lambda item: item[1],reverse=True))
+    for d in docs:
+        title = data_reader.sheet_by_index(0).cell(int(d), 2).value
+        print(title)
 
 
 
@@ -90,10 +124,8 @@ json.dump(positional_index, f)
 f.close()
 
 #reading dictionary from file
-
 f = open('index.json', encoding='utf-8')
 data = json.load(f)
-print(data['گزارش'])
 f.close()
 
 
