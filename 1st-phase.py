@@ -1,5 +1,6 @@
 from __future__ import unicode_literals
 import json
+import os
 import numpy as np
 import xlrd
 import xlsxwriter
@@ -18,6 +19,7 @@ tokenizer = Tokenizer()
 stemmer = FindStems()
 
 positional_index = dict()
+positional_index_with_stops = dict()
 
 def add_to_index(token , position , docID):
 
@@ -27,26 +29,32 @@ def add_to_index(token , position , docID):
         positions[str(docID)].append(position)
         print(token + ">>>>>")
         print(positions)
-        each_doc_count = np.zeros(number_of_rows)
-        each_doc_count = each_doc_count.tolist()
-        each_doc_count [docID] = 1
+        # each_doc_count = np.zeros(number_of_rows)
+        # each_doc_count = each_doc_count.tolist()
+        # each_doc_count [docID] = 1
         repeat_num = 1
-        dict_value = [positions , repeat_num , each_doc_count]
+        # dict_value = [positions , repeat_num , each_doc_count]
+        dict_value = [positions , repeat_num]
         positional_index[token] = dict_value
     else:
         positions = positional_index[token][0]
-        each_doc_count = positional_index[token][2]
-        positions[str(docID)].append(position)
+        # each_doc_count = positional_index[token][2]
+        if (str(docID)) in positions:
+            positions[str(docID)].append(position)
+        else:
+            positions[str(docID)] = []
+            positions[str(docID)].append(position)
+
         print(token + ">>>>>")
         print(positions)
         positional_index[token][0] = positions
         positional_index[token][1] +=1
-        each_doc_count[docID] += 1
-        positional_index[token][2] = each_doc_count
+        # each_doc_count[docID] += 1
+        # positional_index[token][2] = each_doc_count
 
 
 
-def preprocess ():
+def make_index ():
 
     for i in range(1, number_of_rows+1):
 
@@ -75,7 +83,11 @@ def preprocess ():
 
                     else:
                         filehandle.write('%s\n' % stem_token)
-                        add_to_index(stem_token, j + 1, 2)
+                        add_to_index(stem_token, j + 1, i)
+        # writing dictionary to file
+        f = open("index.json", "w", encoding="utf-8")
+        json.dump(positional_index, f)
+        f.close()
 
 #TODO handle searching verbs
 
@@ -118,15 +130,26 @@ def answer_multi_word_query(query):
 
 
 
-#writing dictionary to file
-f = open("index.json", "w" , encoding="utf-8")
-json.dump(positional_index, f)
-f.close()
+def main():
 
-#reading dictionary from file
-f = open('index.json', encoding='utf-8')
-data = json.load(f)
-f.close()
+    if (os.stat("index.json").st_size == 0):
+        make_index()
+    else:
+        # reading dictionary from file
+        f = open('index.json', encoding='utf-8')
+        data = json.load(f)
+        positional_index = data
+        f.close()
+    print("1- one word query \n 2- multiple word query")
+    num = input()
+    if (num ==1):
+        query = input("Enter your one word query")
+        answer_one_word_query(query)
+    elif (num==2):
+        query = input("Enter your multiple word query")
+        answer_multi_word_query(query)
 
 
 
+if __name__ == "__main__":
+    main()
