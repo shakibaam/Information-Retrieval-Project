@@ -83,8 +83,9 @@ def add_to_index_with_stop(token, position, docID):
         positions = positional_index_with_stops[token][0]
 
         if (str(docID)) in positions:
-            positions[str(docID)][1].append(position)
-            positions[str(docID)][0] += 1
+            if (position not in positions[str(docID)][1]):
+                positions[str(docID)][1].append(position)
+                positions[str(docID)][0] += 1
         else:
             positions[str(docID)] = []
             positions[str(docID)].append(1)
@@ -96,10 +97,13 @@ def add_to_index_with_stop(token, position, docID):
         positional_index_with_stops[token][1] += 1
 
 
+
 def make_index():
     term_doc = []
-    flag =False
-    garbage = ['۱','۲','۳','۴','۵','۶','۷','۸','۹','۰','a','b','c','d','e','t','o','p','x','y','z','https','،','.',':','**','-','1','2','3','4','5','6','7','8','9','0','?','**','[',']','(','://','/?','=','&','/','؛']
+
+    garbage = ['۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹', '۰', 'a', 'b', 'c', 'd', 'e', 't', 'o', 'p', 'x', 'y', 'z',
+               'https', '،', '.', ':', '**', '-', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '?', '**', '[', ']',
+               '(', ')', '://', '/?', '=', '&', '/', '؛', '&', '/', '.', '_', '،', '?**', ":"]
 
     for i in range(1, number_of_rows):
 
@@ -109,27 +113,30 @@ def make_index():
         temp_tokens = tokenizer.tokenize_words(temp)
         print(str(i) + " : " + str(len(temp_tokens)))
         print(temp_tokens)
-        for token in temp_tokens:
-            term_doc.append((token , i , temp_tokens.index(token)+1))
+        for j in range(len(temp_tokens)):
+            term_doc.append((temp_tokens[j], i, j + 1))
 
-    for (token , docID , position) in term_doc :
+    for (token, docID, position) in term_doc:
+
 
         file = open("stop_words.txt", encoding="utf-8")
         # (listitem in file.read()) and (listitem not in garbage)
-        if ((token in file.read()) and (token not in garbage)):
-            print("stop :" + token)
-            stem_token = stemmer.convert_to_stem(token)
-            if "&" in stem_token:
-                mazi, mozare = stem_token.split("&")
-                # filehandle.write('%s\n' % (mazi + ":" + listitem))
-                # filehandle.write('%s\n' % (mozare + ":" + listitem))
+        if ((token in file.read())):
+            if ((str(token) not in garbage)):
+                print("stop :" + token)
+                stem_token = stemmer.convert_to_stem(token)
+                if "&" in stem_token:
+                    mazi, mozare = stem_token.split("&")
+                    # filehandle.write('%s\n' % (mazi + ":" + listitem))
+                    # filehandle.write('%s\n' % (mozare + ":" + listitem))
 
-                add_to_index_with_stop(mazi, position, docID)
-                add_to_index_with_stop(mozare, position, docID)
+                    add_to_index_with_stop(mazi, position, docID)
+                    add_to_index_with_stop(mozare, position, docID)
 
-            else:
-                # filehandle.write('%s\n' % (stem_token + ":" + listitem))
-                add_to_index_with_stop(stem_token, position, docID)
+                else:
+
+                    # filehandle.write('%s\n' % (stem_token + ":" + listitem))
+                    add_to_index_with_stop(stem_token, position, docID)
         else:
 
             stem_token = stemmer.convert_to_stem(token)
@@ -147,8 +154,6 @@ def make_index():
                 # filehandle.write('%s\n' % (stem_token + ":" + listitem))
                 add_to_index(stem_token, position, docID)
                 add_to_index_with_stop(stem_token, position, docID)
-
-
 
         # writing dictionary to file
     f = open("index.json", "w", encoding="utf-8")
@@ -180,16 +185,20 @@ def answer_multi_word_query(query, positional_index):
     docs = dict()
     normal_query = normalizer.normalize(query)
     tokens = tokenizer.tokenize_words(normal_query)
+    print(tokens)
     for token in tokens:
         stem_token = stemmer.convert_to_stem(token)
         if stem_token in positional_index:
             print("find some Docs related :)")
             dict_value = positional_index[stem_token]
+
             docs_and_positions = dict_value[0]
             for doc in docs_and_positions:
+
                 if doc not in docs:
                     docs[doc] = 1
                 else:
+
                     docs[doc] = docs[doc] + 1
 
     docs = dict(sorted(docs.items(), key=lambda item: item[1], reverse=True))
@@ -199,26 +208,26 @@ def answer_multi_word_query(query, positional_index):
 
 
 def main():
-    # if (os.stat("index.json").st_size == 0):
-    make_index()
+    if (os.stat("index.json").st_size == 0):
+        make_index()
 
 
-# else:
-#     # reading dictionary from file
-#     f = open('index.json', encoding='utf-8')
-#     data = json.load(f)
-#     positional_index = data
-#     f.close()
+    else:
+        # reading dictionary from file
+        f = open('index.json', encoding='utf-8')
+        data = json.load(f)
+        positional_index = data
+        f.close()
 
 
-# print("1- one word query \n 2- multiple word query")
-# num = input()
-# if (num == 1):
-#     query = input("Enter your one word query")
-#     answer_one_word_query(query , positional_index)
-# elif (num == 2):
-#     query = input("Enter your multiple word query")
-#     answer_multi_word_query(query , positional_index)
+        print("1- one word query \n 2- multiple word query")
+        num = input()
+        if (int(num) == 1):
+            query = input("Enter your one word query")
+            answer_one_word_query(query , positional_index)
+        elif (int(num) == 2):
+            query = input("Enter your multiple word query")
+            answer_multi_word_query(query , positional_index)
 
 
 if __name__ == "__main__":
