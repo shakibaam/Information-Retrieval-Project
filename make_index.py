@@ -1,12 +1,11 @@
 from __future__ import unicode_literals
 import json
 import os
-import numpy as np
 import parsivar
 import xlrd
 import xlsxwriter
-# from parsivar import *
 from hazm import *
+import hazm
 
 data_set = 'D:\ترم7\بازیابی\Project-1st Phase\IR-1st-Phase\IR1_7k_news.xlsx'
 data_reader = xlrd.open_workbook(data_set)
@@ -21,9 +20,14 @@ normalizer = parsivar.Normalizer(statistical_space_correction=True, date_normali
 tokenizer = parsivar.Tokenizer()
 stemmer = parsivar.FindStems()
 stemmer_hazm = Stemmer()
+hazm_normalaizer = hazm.Normalizer()
 
 positional_index = dict()
 positional_index_with_stops = dict()
+garbage = ['۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹', '۰', 'a', 'b', 'c', 'd', 'e', 't', 'o', 'p', 'x', 'y', 'z',
+           'https', '،', '.', ':', '**', '-', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '?', '**', '[', ']',
+           '(', ')', '://', '/?', '=', '&', '/', '؛', '&', '/', '.', '_', '،', '?**', ":", "%", ">>", "<<", "#", "!",
+           "*", "«", "»"]
 
 
 def add_to_index(token, position, docID):
@@ -97,13 +101,8 @@ def add_to_index_with_stop(token, position, docID):
         positional_index_with_stops[token][1] += 1
 
 
-
 def make_index():
     term_doc = []
-
-    garbage = ['۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹', '۰', 'a', 'b', 'c', 'd', 'e', 't', 'o', 'p', 'x', 'y', 'z',
-               'https', '،', '.', ':', '**', '-', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '?', '**', '[', ']',
-               '(', ')', '://', '/?', '=', '&', '/', '؛', '&', '/', '.', '_', '،', '?**', ":"]
 
     for i in range(1, number_of_rows):
 
@@ -117,7 +116,6 @@ def make_index():
             term_doc.append((temp_tokens[j], i, j + 1))
 
     for (token, docID, position) in term_doc:
-
 
         file = open("stop_words.txt", encoding="utf-8")
         # (listitem in file.read()) and (listitem not in garbage)
@@ -156,36 +154,47 @@ def make_index():
                 add_to_index_with_stop(stem_token, position, docID)
 
         # writing dictionary to file
-    f = open("index.json", "w", encoding="utf-8")
-    json.dump(positional_index, f)
-    f.close()
 
     f = open("index_with_stops.json", "w", encoding="utf-8")
     json.dump(positional_index_with_stops, f)
     f.close()
 
 
-# TODO handle searching verbs
-
 def answer_one_word_query(query, positional_index):
     normal_query = normalizer.normalize(query)
     stem_query = stemmer.convert_to_stem(normal_query)
-
+    f = open("answer.txt", "a", encoding="utf-8")
+    i = 0
     if stem_query in positional_index:
-        print("find some Docs related :)")
+        # print("find some Docs related :)")
         dict_value = positional_index[stem_query]
         docs_and_positions = dict_value[0]
 
         for doc in docs_and_positions:
+
             title = data_reader.sheet_by_index(0).cell(int(doc), 2).value
-            print(title)
+            news_content = normalizer.normalize(data_reader.sheet_by_index(0).cell(int(doc), 0).value)
+            sentences = sent_tokenize(str(news_content))
+            f.write("Title of the news is : {}\n".format(title))
+            relative_sentences = [s for s in sentences if query in s]
+
+            print("Title of the news is : {}".format(title))
+            #
+            # # print(news_content)
+            print("senteces which are relative :")
+            for s in relative_sentences:
+                print(s)
+                f.write("{} \n".format(s))
+            print("---------------------------------------")
 
 
-def answer_multi_word_query(query, positional_index):
+def answer_multi_word_query2(query, positional_index):
     docs = dict()
     normal_query = normalizer.normalize(query)
     tokens = tokenizer.tokenize_words(normal_query)
-    print(tokens)
+    f = open("answer.txt", "a", encoding="utf-8")
+    # print(tokens)
+
     for token in tokens:
         stem_token = stemmer.convert_to_stem(token)
         if stem_token in positional_index:
@@ -203,31 +212,166 @@ def answer_multi_word_query(query, positional_index):
 
     docs = dict(sorted(docs.items(), key=lambda item: item[1], reverse=True))
     for d in docs:
+        print(d)
+        relative_sentences = []
         title = data_reader.sheet_by_index(0).cell(int(d), 2).value
-        print(title)
+        news_content = normalizer.normalize(data_reader.sheet_by_index(0).cell(int(d), 0).value)
+        sentences = sent_tokenize(str(news_content))
+        f.write("Title of the news is : {}\n".format(title))
+        for t in tokens:
+            relative_sentences += [s for s in sentences if t in s]
+
+        print("Title of the news is : {}".format(title))
+
+        print("senteces which are relative :")
+        for s in relative_sentences:
+            print(s)
+            f.write("{} \n".format(s))
+        print("---------------------------------------")
+
+
+def answer_multi_word_query(query, positional_index):
+    docs = dict()
+    normal_query = normalizer.normalize(query)
+    tokens = tokenizer.tokenize_words(normal_query)
+    answers = dict()
+
+    for t in tokens:
+
+        stem_token = stemmer_hazm.stem(t)
+        print(stem_token)
+
+        if stem_token in positional_index:
+            docs_and_positions = positional_index[stem_token][0]
+
+            for doc in docs_and_positions:
+
+                positions = docs_and_positions[doc][1]
+                # print("{}  {}  {}".format(stem_token,doc,positions))
+
+                i = tokens.index(t) + 1
+                count = 1
+                answers[doc] = count
+
+                flag = True
+                if i < len(tokens):
+
+                    if doc in positional_index[tokens[i]][0]:
+                        while flag:
+
+                            j = 0
+
+                            j_flag = True
+                            k = 0
+                            k_flag = True
+
+                            find = False
+                            while j_flag:
+                                while k_flag:
+
+                                    distance = positional_index[tokens[i]][0][doc][1][k] - positions[j]
+                                    print(positional_index[tokens[i]][0][doc][1][k])
+                                    print(positions[j])
+
+                                    if distance == i - tokens.index(t):
+                                        find = True
+                                        j_flag = False
+                                        k_flag = False
+                                    k += 1
+                                    if k >= len(positional_index[tokens[i]][0][doc][1]):
+                                        k_flag = False
+                                        j_flag = False
+                                    j += 1
+                                    if j >= len(positions):
+                                        j_flag = False
+                                        k_flag = False
+
+                            # distances = [x2 - x1 for x2, x1 in zip(positional_index[tokens[i]][0][doc], positions)]
+                            if find == True:
+                                print("here1")
+                                print("=============================")
+                                i += 1
+                                if i == len(tokens):
+                                    flag = False
+                                count += 1
+                                answers[doc] = count
+
+                            else:
+                                print("here2")
+                                print("=============================")
+                                answers[doc] = count
+                                flag = False
+                    answers[doc] = count
+
+                    # else:
+                    #     flag = False
+
+    answers = dict(sorted(answers.items(), key=lambda item: item[1], reverse=True))
+    for d in answers:
+        relative_sentences = []
+        title = data_reader.sheet_by_index(0).cell(int(d), 2).value
+        news_content = hazm_normalaizer.normalize(data_reader.sheet_by_index(0).cell(int(d), 0).value)
+        sentences = sent_tokenize(str(news_content))
+        # f.write("Title of the news is : {}\n".format(title))
+        for t in tokens:
+            relative_sentences += [s for s in sentences if t in s]
+
+        print("Title of the news is : {}".format(title))
+
+        print("senteces which are relative :")
+        for s in relative_sentences:
+            print(s)
+            # f.write("{} \n".format(s))
+        print("---------------------------------------")
 
 
 def main():
-    if (os.stat("index.json").st_size == 0):
-        make_index()
+    # if (os.stat("index.json").st_size == 0):
+    #     make_index()
 
+    # else:
+    # reading dictionary from file
+    f = open('positional_index.json', encoding='utf-8')
+    data = json.load(f)
+    positional_index = data
+    f.close()
 
-    else:
-        # reading dictionary from file
-        f = open('index.json', encoding='utf-8')
-        data = json.load(f)
-        positional_index = data
-        f.close()
+    # stop_words = [word for word in open('stop_words.txt', 'r', encoding='utf8').read().split('\n')]
+    # for word in stop_words:
+    #     if word in positional_index :
+    #
+    #         positional_index.pop(word)
+    # for x in garbage :
+    #     if x in positional_index :
+    #         positional_index.pop(x)
+    # f = open("positional_index.json", "w", encoding="utf-8")
+    # json.dump(positional_index, f)
+    # f.close()
 
+    # f = open('index_with_stops.json', encoding='utf-8')
+    # data = json.load(f)
+    # positional_index_with_stops = data
+    # f.close()
+    #
+    # for x in garbage :
+    #     if x in positional_index_with_stops :
+    #         positional_index_with_stops.pop(x)
 
-        print("1- one word query \n 2- multiple word query")
-        num = input()
-        if (int(num) == 1):
-            query = input("Enter your one word query")
-            answer_one_word_query(query , positional_index)
-        elif (int(num) == 2):
-            query = input("Enter your multiple word query")
-            answer_multi_word_query(query , positional_index)
+    # f = open("positional_index.json", "w", encoding="utf-8")
+    # json.dump(positional_index, f)
+    # f.close()
+    # f = open("positional_index_with_stops.json", "w", encoding="utf-8")
+    # json.dump(positional_index_with_stops, f)
+    # f.close()
+
+    print("1- one word query \n 2- multiple word query")
+    num = input()
+    if (int(num) == 1):
+        query = input("Enter your one word query")
+        answer_one_word_query(query, positional_index)
+    elif (int(num) == 2):
+        query = input("Enter your multiple word query")
+        answer_multi_word_query(query, positional_index)
 
 
 if __name__ == "__main__":
