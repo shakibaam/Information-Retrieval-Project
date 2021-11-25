@@ -162,7 +162,7 @@ def make_index():
 
 
 def answer_one_word_query(query, positional_index):
-    normal_query = normalizer.normalize(query)
+    normal_query = hazm_normalaizer.normalize(query)
     stem_query = stemmer.convert_to_stem(normal_query)
     f = open("answer.txt", "a", encoding="utf-8")
     i = 0
@@ -254,60 +254,84 @@ def answer_multi_word_query(query, positional_index):
                 count = 1
                 if (i == len(tokens)):
                     if doc not in answers:
-                        answers[doc] = count
+                      answers[doc] = count
 
                 flag = True
                 if i < len(tokens):
 
-                    if doc in positional_index[tokens[i]][0]:
-                        print(doc)
-                        print(positional_index[tokens[i]][0][doc][1])
-                        print(positions)
+                    if doc in positional_index[stemmer_hazm.stem(tokens[i])][0]:
+                        # print(doc)
+                        # print(positional_index[stemmer_hazm.stem(tokens[i])][0][doc][1])
+                        # print(positions)
                         while flag:
 
                             find = False
-                            for p1 in positions:
-                                for p2 in positional_index[tokens[i]][0][doc][1]:
-                                    distance = abs(p1 - p2)
-                                    if distance == i - tokens.index(t):
-                                        find = True
-                            if find == True:
-                                print("here1")
-                                print("=============================")
-                                count += 1
+                            if doc in positional_index[stemmer_hazm.stem(tokens[i])][0]:
+                                print(tokens[i])
+                                print(t)
+                                for p1 in positions:
+                                    for p2 in positional_index[stemmer_hazm.stem(tokens[i])][0][doc][1]:
+                                        distance = abs(p1 - p2)
+                                        if distance == i - tokens.index(t):
+                                            print(p1)
+                                            print(p2)
+                                            find = True
+                                if find == True:
+                                    print(doc)
+                                    print("here1")
+                                    print("=============================")
+                                    count += 1
+                                    if ( doc in answers and answers[doc] < count):
+                                       answers[doc] = count
+                                    elif doc not  in answers :
+                                        answers[doc] = count
+                                    # print(answers[doc])
+                                    i += 1
+                                    if i == len(tokens):
+                                        flag = False
+                                    else:
+                                        continue
 
-                                answers[doc] = count
-                                i += 1
-                                if i == len(tokens):
+
+
+                                else:
+                                    print("here2")
+                                    print("=============================")
+                                    if (doc in answers and answers[doc] < count):
+                                        answers[doc] = count
+                                    elif doc not in answers:
+                                        answers[doc] = count
+
+
                                     flag = False
 
-                            else:
-                                print("here2")
-                                print("=============================")
-                                answers[doc] = count
+                            else:flag = False
 
-                                flag = False
-                    else:
-                        answers[doc] = count
 
     answers = dict(sorted(answers.items(), key=lambda item: item[1], reverse=True))
     print(answers)
-    # for d in answers:
-    #     relative_sentences = []
-    #     title = data_reader.sheet_by_index(0).cell(int(d), 2).value
-    #     news_content = hazm_normalaizer.normalize(data_reader.sheet_by_index(0).cell(int(d), 0).value)
-    #     sentences = sent_tokenize(str(news_content))
-    #     # f.write("Title of the news is : {}\n".format(title))
-    #     for t in tokens:
-    #         relative_sentences += [s for s in sentences if t in s]
-    #
-    #     print("Title of the news is : {}".format(title))
-    #
-    #     print("senteces which are relative :")
-    #     for s in relative_sentences:
-    #         print(s)
-    #         # f.write("{} \n".format(s))
-    #     print("---------------------------------------")
+    file_name = str(query) + ".txt"
+    f = open(file_name, "a", encoding="utf-8")
+    for d in answers:
+        print(d)
+        relative_sentences = []
+        title = data_reader.sheet_by_index(0).cell(int(d), 2).value
+        news_content = hazm_normalaizer.normalize(data_reader.sheet_by_index(0).cell(int(d), 0).value)
+        sentences = sent_tokenize(str(news_content))
+        # f.write("Title of the news is : {}\n".format(title))
+        for t in tokens:
+            relative_sentences += [s for s in sentences if t in s]
+
+        print("Title of the news is : {}".format(title))
+        f.write("Title of the news is : {}\n".format(title))
+
+        print("senteces which are relative :")
+        for s in relative_sentences:
+            print(s)
+
+            f.write("{} \n".format(s))
+        f.write("-----------------------------------------------------------------------------------------\n")
+        print("---------------------------------------")
 
 
 def answer_multi_word_query3(query, positional_index):
