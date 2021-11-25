@@ -236,6 +236,10 @@ def answer_multi_word_query(query, positional_index):
     normal_query = normalizer.normalize(query)
     tokens = tokenizer.tokenize_words(normal_query)
     answers = dict()
+    # print( tokenizer.tokenize_words( normalizer.normalize(data_reader.sheet_by_index(0).cell(1960, 0).value))[675])
+    # print(tokenizer.tokenize_words(normalizer.normalize(data_reader.sheet_by_index(0).cell(1960, 0).value))[676])
+    # print(tokenizer.tokenize_words(normalizer.normalize(data_reader.sheet_by_index(0).cell(1960, 0).value))[677])
+    print("*******************************************")
 
     for t in tokens:
 
@@ -243,7 +247,7 @@ def answer_multi_word_query(query, positional_index):
 
         if stem_token in positional_index:
             docs_and_positions = positional_index[stem_token][0]
-            # print(docs_and_positions)
+            print(docs_and_positions)
 
             for doc in docs_and_positions:
 
@@ -257,15 +261,18 @@ def answer_multi_word_query(query, positional_index):
                       answers[doc] = count
 
                 flag = True
+                test = False
                 if i < len(tokens):
 
                     if doc in positional_index[stemmer_hazm.stem(tokens[i])][0]:
                         # print(doc)
                         # print(positional_index[stemmer_hazm.stem(tokens[i])][0][doc][1])
                         # print(positions)
+
                         while flag:
 
                             find = False
+
                             if doc in positional_index[stemmer_hazm.stem(tokens[i])][0]:
                                 print(tokens[i])
                                 print(t)
@@ -273,9 +280,20 @@ def answer_multi_word_query(query, positional_index):
                                     for p2 in positional_index[stemmer_hazm.stem(tokens[i])][0][doc][1]:
                                         distance = abs(p1 - p2)
                                         if distance == i - tokens.index(t):
-                                            print(p1)
-                                            print(p2)
-                                            find = True
+                                            if test :
+                                                if p1 == pos1:
+                                                    print(p1)
+                                                    print(p2)
+                                                    pos1 = p1
+                                                    pos2 = p2
+                                                    find = True
+                                            else:
+                                                print(p1)
+                                                print(p2)
+                                                pos1 = p1
+                                                pos2 = p2
+                                                find = True
+
                                 if find == True:
                                     print(doc)
                                     print("here1")
@@ -290,6 +308,7 @@ def answer_multi_word_query(query, positional_index):
                                     if i == len(tokens):
                                         flag = False
                                     else:
+                                        test = True
                                         continue
 
 
@@ -306,6 +325,11 @@ def answer_multi_word_query(query, positional_index):
                                     flag = False
 
                             else:flag = False
+                    else:
+                        if doc not in answers :
+                            answers [doc] = count
+                        if doc in answers and answers[doc] < count :
+                            answers[doc] = count
 
 
     answers = dict(sorted(answers.items(), key=lambda item: item[1], reverse=True))
