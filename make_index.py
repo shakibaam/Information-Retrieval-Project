@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
 import json
 import os
+import math
 import parsivar
 import xlrd
 import xlsxwriter
@@ -239,14 +240,97 @@ def answer_multi_word_query(query, positional_index):
     for t in tokens:
 
         stem_token = stemmer_hazm.stem(t)
-        print(stem_token)
 
         if stem_token in positional_index:
             docs_and_positions = positional_index[stem_token][0]
+            # print(docs_and_positions)
 
             for doc in docs_and_positions:
 
                 positions = docs_and_positions[doc][1]
+
+                i = tokens.index(t) + 1
+
+                count = 1
+                if (i == len(tokens)):
+                    if doc not in answers:
+                        answers[doc] = count
+
+                flag = True
+                if i < len(tokens):
+
+                    if doc in positional_index[tokens[i]][0]:
+                        print(doc)
+                        print(positional_index[tokens[i]][0][doc][1])
+                        print(positions)
+                        while flag:
+
+                            find = False
+                            for p1 in positions:
+                                for p2 in positional_index[tokens[i]][0][doc][1]:
+                                    distance = abs(p1 - p2)
+                                    if distance == i - tokens.index(t):
+                                        find = True
+                            if find == True:
+                                print("here1")
+                                print("=============================")
+                                count += 1
+
+                                answers[doc] = count
+                                i += 1
+                                if i == len(tokens):
+                                    flag = False
+
+                            else:
+                                print("here2")
+                                print("=============================")
+                                answers[doc] = count
+
+                                flag = False
+                    else:
+                        answers[doc] = count
+
+    answers = dict(sorted(answers.items(), key=lambda item: item[1], reverse=True))
+    print(answers)
+    # for d in answers:
+    #     relative_sentences = []
+    #     title = data_reader.sheet_by_index(0).cell(int(d), 2).value
+    #     news_content = hazm_normalaizer.normalize(data_reader.sheet_by_index(0).cell(int(d), 0).value)
+    #     sentences = sent_tokenize(str(news_content))
+    #     # f.write("Title of the news is : {}\n".format(title))
+    #     for t in tokens:
+    #         relative_sentences += [s for s in sentences if t in s]
+    #
+    #     print("Title of the news is : {}".format(title))
+    #
+    #     print("senteces which are relative :")
+    #     for s in relative_sentences:
+    #         print(s)
+    #         # f.write("{} \n".format(s))
+    #     print("---------------------------------------")
+
+
+def answer_multi_word_query3(query, positional_index):
+    docs = dict()
+    normal_query = normalizer.normalize(query)
+    tokens = tokenizer.tokenize_words(normal_query)
+    answers = dict()
+
+    for t in tokens:
+
+        stem_token = stemmer_hazm.stem(t)
+        # print(positional_index["واکسن"][0])
+        # print(positional_index["آسترازنکا"][0])
+
+        if stem_token in positional_index:
+            docs_and_positions = positional_index[stem_token][0]
+            # print(t)
+            # print(docs_and_positions)
+
+            for doc in docs_and_positions:
+
+                positions = docs_and_positions[doc][1]
+
                 # print("{}  {}  {}".format(stem_token,doc,positions))
 
                 i = tokens.index(t) + 1
@@ -266,63 +350,77 @@ def answer_multi_word_query(query, positional_index):
                             k_flag = True
 
                             find = False
+                            # for p1 in positions :
+                            #     for p2 in positional_index[tokens[i]][0][doc][1] :
+
                             while j_flag:
+
                                 while k_flag:
 
-                                    distance = positional_index[tokens[i]][0][doc][1][k] - positions[j]
-                                    print(positional_index[tokens[i]][0][doc][1][k])
-                                    print(positions[j])
+                                    # distance = int(positional_index[tokens[i]][0][doc][1][k])
+                                    distance = abs(positions[j] - positional_index[tokens[i]][0][doc][1][k])
+                                    # distance = positional_index[tokens[i]][0][doc][1][k] - positions[j]
+                                    print(distance)
+
+                                    # if distance >i - tokens.index(t) :
+                                    #     j += 1
+                                    #     k = 0
 
                                     if distance == i - tokens.index(t):
                                         find = True
-                                        j_flag = False
-                                        k_flag = False
+                                        # j_flag = False
+                                        # k_flag = False
                                     k += 1
                                     if k >= len(positional_index[tokens[i]][0][doc][1]):
                                         k_flag = False
                                         j_flag = False
+                                    else:
+                                        continue
                                     j += 1
                                     if j >= len(positions):
                                         j_flag = False
                                         k_flag = False
+                                    else:
+                                        continue
 
                             # distances = [x2 - x1 for x2, x1 in zip(positional_index[tokens[i]][0][doc], positions)]
                             if find == True:
                                 print("here1")
                                 print("=============================")
+                                count += 1
+                                answers[doc] = count
                                 i += 1
                                 if i == len(tokens):
                                     flag = False
-                                count += 1
-                                answers[doc] = count
 
                             else:
                                 print("here2")
                                 print("=============================")
                                 answers[doc] = count
                                 flag = False
-                    answers[doc] = count
+                    # answers[doc] = count
 
                     # else:
                     #     flag = False
 
     answers = dict(sorted(answers.items(), key=lambda item: item[1], reverse=True))
-    for d in answers:
-        relative_sentences = []
-        title = data_reader.sheet_by_index(0).cell(int(d), 2).value
-        news_content = hazm_normalaizer.normalize(data_reader.sheet_by_index(0).cell(int(d), 0).value)
-        sentences = sent_tokenize(str(news_content))
-        # f.write("Title of the news is : {}\n".format(title))
-        for t in tokens:
-            relative_sentences += [s for s in sentences if t in s]
-
-        print("Title of the news is : {}".format(title))
-
-        print("senteces which are relative :")
-        for s in relative_sentences:
-            print(s)
-            # f.write("{} \n".format(s))
-        print("---------------------------------------")
+    print(answers)
+    # for d in answers:
+    #     relative_sentences = []
+    #     title = data_reader.sheet_by_index(0).cell(int(d), 2).value
+    #     news_content = hazm_normalaizer.normalize(data_reader.sheet_by_index(0).cell(int(d), 0).value)
+    #     sentences = sent_tokenize(str(news_content))
+    #     # f.write("Title of the news is : {}\n".format(title))
+    #     for t in tokens:
+    #         relative_sentences += [s for s in sentences if t in s]
+    #
+    #     print("Title of the news is : {}".format(title))
+    #
+    #     print("senteces which are relative :")
+    #     for s in relative_sentences:
+    #         print(s)
+    #         # f.write("{} \n".format(s))
+    #     print("---------------------------------------")
 
 
 def main():
