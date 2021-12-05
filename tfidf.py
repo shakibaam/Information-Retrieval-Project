@@ -12,8 +12,6 @@ data_set = 'D:\ترم7\بازیابی\Project-1st Phase\IR-1st-Phase\IR1_7k_news
 data_reader = xlrd.open_workbook(data_set)
 content = data_reader.sheet_by_index(0)
 
-data_writer = xlsxwriter.Workbook(data_set)
-worksheet = data_writer.add_worksheet()
 number_of_rows = content.nrows
 
 for t in positional_index :
