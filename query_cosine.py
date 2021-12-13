@@ -12,83 +12,99 @@ tokenizer = parsivar.Tokenizer()
 normalizer = parsivar.Normalizer(statistical_space_correction=True, date_normalizing_needed=True,pinglish_conversion_needed=True)
 stemmer_hazm = Stemmer()
 
-data_set = 'D:\ترم7\بازیابی\Project-1st Phase\IR-1st-Phase\IR1_7k_news.xlsx'
+data_set = 'IR1_7k_news.xlsx'
 data_reader = xlrd.open_workbook(data_set)
 content = data_reader.sheet_by_index(0)
 
 
 number_of_rows = content.nrows
 
-f = open('tfidf_index.json', encoding='utf-8')
+f = open('champions.json', encoding='utf-8')
 data = json.load(f)
-positional_index = data
+tokens_and_champions = data
 f.close()
 
-f = open('with_champion_index.json', encoding='utf-8')
+f = open('tfidf_index_non_positional.json', encoding='utf-8')
 data = json.load(f)
-positional_index_with_champion = data
+non_positional_index = data
 f.close()
+
+
+def calculate_doc_lenght(doc_id) :
+    temp = data_reader.sheet_by_index(0).cell(int(doc_id), 0).value
+    temp = hazm_normalaizer.normalize(temp)
+    tokens = word_tokenize(temp)
+    tokens = [stemmer_hazm.stem(t) for t in tokens]
+    length = 0
+    for t in tokens :
+
+        length += (non_positional_index[t][doc_id][1]) ** 2 # non_positional_index[t][doc_id][1] is weight of the t in that doc
+
+    return math.sqrt(length)
+
 
 def query_score (query) :
-    query_tokens = tokenizer.tokenize_words(query)
-    query_score = []
+
+    query_tokens = word_tokenize(query)
+    query_score = {}
     for term, count in Counter(query_tokens).items():
         tf = (1 + math.log10(count))
         idf = math.log10(number_of_rows/1)
         tfidf = tf * idf
-        query_score.append(tfidf)
+        query_score[term] = (tfidf)
     return query_score
 
 
-
-
-def cosine_score (query , k) :
+def cosine_score_non_positional(query , k):
     scores = dict()
-    query_tokens = tokenizer.tokenize_words(query)
+    query = hazm_normalaizer.normalize(query)
+    query_tokens = hazm.word_tokenize(query)
     query_scores = query_score(query)
     for i in range(len(query_tokens)):
-        wtq = query_scores [i]
-        docs_and_positions = positional_index[query_tokens[i]][0]
-        for doc in docs_and_positions :
-            wtd = docs_and_positions[doc][2]
-            if doc not in scores :
-                scores[doc] = wtq * wtd
+        wtq = query_scores[query_tokens[i]]
+
+        docs = non_positional_index[stemmer_hazm.stem(query_tokens[i])]
+        print(docs)
+        for d in docs :
+            wtd = docs[d][1]
+            if d not in scores :
+                scores[d] = wtq * wtd
             else:
-                scores[doc] += wtq * wtd
-
-
+                scores[d] += wtq * wtd
     for d in scores :
-        scores[d] = scores[d]/len(scores)
+        scores[d] = scores[d] / calculate_doc_lenght(d)
 
     scores = dict(sorted(scores.items(), key=lambda item: item[1], reverse=True))
     print(scores)
     k_first = dict(list(scores.items())[0: k])
     return k_first
+
+
 
 def cosine_score_with_champion (query , k) :
     scores = dict()
-    query_tokens = tokenizer.tokenize_words(query)
+    query = hazm_normalaizer.normalize(query)
+    query_tokens = hazm.word_tokenize(query)
     query_scores = query_score(query)
     for i in range(len(query_tokens)):
-        wtq = query_scores [i]
-        docs_and_positions = positional_index_with_champion[query_tokens[i]][0]
-        champions = positional_index_with_champion[query_tokens[i]][2]
-        for doc in champions :
-            wtd = docs_and_positions[doc][2]
-            if doc not in scores :
-                scores[doc] = wtq * wtd
+        champions = tokens_and_champions[stemmer_hazm.stem(query_tokens[i])]
+        wtq = query_scores[query_tokens[i]]
+
+        docs = non_positional_index[stemmer_hazm.stem(query_tokens[i])]
+        print(docs)
+        for d in champions:
+            wtd = docs[d][1]
+            if d not in scores:
+                scores[d] = wtq * wtd
             else:
-                scores[doc] += wtq * wtd
-
-
-    for d in scores :
-        scores[d] = scores[d]/len(scores)
+                scores[d] += wtq * wtd
+    for d in scores:
+        scores[d] = scores[d] / calculate_doc_lenght(d)
 
     scores = dict(sorted(scores.items(), key=lambda item: item[1], reverse=True))
     print(scores)
     k_first = dict(list(scores.items())[0: k])
     return k_first
-
 
 def show_answers(answers,query):
     file_name = str(query) + ".txt"
@@ -96,7 +112,7 @@ def show_answers(answers,query):
     normal_query = normalizer.normalize(query)
     tokens = tokenizer.tokenize_words(normal_query)
     for d in answers:
-        print(d)
+        print("{} : {}".format(d, answers[d]))
         relative_sentences = []
         title = data_reader.sheet_by_index(0).cell(int(d), 2).value
         news_content = hazm_normalaizer.normalize(data_reader.sheet_by_index(0).cell(int(d), 0).value)
@@ -118,39 +134,38 @@ def show_answers(answers,query):
             f.write("{} \n".format(s))
         f.write("-----------------------------------------------------------------------------------------\n")
 
-def make_champion (positional_index) :
-    for t in positional_index :
-        n_t = positional_index[t][1]
-        docs_and_positions = positional_index[t][0]
-        # r_champion = math.ceil(n_t/2)
-        champions = []
+def make_champion () :
+    token_and_champions = dict()
+    for t in non_positional_index :
 
-        # find w max
-        docs = list(docs_and_positions)
-        w_max = docs_and_positions[docs[0]][2]
-        for doc in docs_and_positions :
-            wtd = docs_and_positions[doc][2]
-            if wtd >= w_max :
-                w_max = wtd
+        docs_and_scores = {}
+        PL = non_positional_index[t]
+        for d in PL :
+            docs_and_scores[d] = PL[d][1]
+        docs_and_scores = dict(sorted(docs_and_scores.items(), key=lambda item: item[1], reverse=True))
+        champions = dict(list(docs_and_scores.items())[0: 40])
 
-        for doc in docs_and_positions :
-            wtd = docs_and_positions[doc][2]
-            if wtd > w_max/2 :
-                champions.append(doc)
+        token_and_champions[t] = list(champions.keys())
 
-        positional_index[t].append(champions)
-
-    f = open("with_champion_index.json", "w", encoding="utf-8")
-    json.dump(positional_index, f)
+    f = open("champions.json", "w", encoding="utf-8")
+    json.dump(token_and_champions, f)
     f.close()
 
 
 
+
+
 def main():
-    query = input("Enter your query")
-    answers =  cosine_score_with_champion(query,10)
-    show_answers(answers,query)
+    # query = input("Enter your query")
+    # answers =  cosine_score_with_champion(query,10)
+    # show_answers(answers,query)
     # make_champion(positional_index)
+    # make_champion()
+    print(len(non_positional_index["امیرکبیر"]))
+    print(tokens_and_champions["امیرکبیر"])
+
+
+
 
 
 if __name__ == "__main__":
