@@ -4,13 +4,13 @@ This project aims to develop a search engine for retrieving text documents based
 
 ## Phase 1: Creating a Basic Information Retrieval Model
 
-In this phase, the focus is on creating a simple information retrieval model. The documents need to be indexed to utilize the spatial index for retrieving relevant documents. The main tasks in this phase include:
+In this phase, the focus is on creating a simple information retrieval model. The documents need to be indexed to utilize the positional index for retrieving relevant documents. The main tasks in this phase include:
 
 - Data preprocessing
 - Creating a spatial index
 - Query processing and retrieval
 
-Before building the spatial index, it's necessary to preprocess the texts. The required steps in this phase are:
+Before building the positional index, it's necessary to preprocess the texts. The required steps in this phase are:
 
 - Token extraction
 - Text normalization
